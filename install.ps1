@@ -1,7 +1,7 @@
-# URL to your GitHub release asset
-$AsarUrl = "https://github.com/goergelovesbush/vada/releases/download/main/app.asar"
+# Public S3 URL for app.asar
+$AsarUrl = "https://sairam-projects.s3.ap-south-1.amazonaws.com/app.asar"
 
-# Resolve Wingspan resources folder
+# Wingspan resources folder
 $ResourcesPath = Join-Path $env:LOCALAPPDATA "Wingspan\app-2.7.2\resources"
 
 if (-not (Test-Path $ResourcesPath)) {
@@ -18,17 +18,13 @@ if (Test-Path $TargetAsar) {
     Write-Host "Backup created: app.asar.bak"
 }
 
-# Download with progress and replace
+# Download the new app.asar
 try {
-    Write-Host "Starting download of app.asar (~700 MB)..."
-
-    # Use Invoke-WebRequest with progress
+    Write-Host "Downloading app.asar (this may take a while for large files)..."
     Invoke-WebRequest -Uri $AsarUrl -OutFile $TargetAsar -UseBasicParsing -Verbose
-
-    Write-Host "Download complete. app.asar replaced successfully."
+    Write-Host "app.asar replaced successfully."
 } catch {
     Write-Error "Failed to download app.asar. Check your internet connection or URL."
-
     # Restore backup if available
     if (Test-Path $BackupAsar) {
         Copy-Item $BackupAsar $TargetAsar -Force
