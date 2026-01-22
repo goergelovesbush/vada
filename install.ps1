@@ -18,10 +18,11 @@ if (Test-Path $TargetAsar) {
     Write-Host "Backup created: app.asar.bak"
 }
 
-# Download and replace
+# Download and replace with progress
 try {
-    Invoke-WebRequest -Uri $AsarUrl -OutFile $TargetAsar -UseBasicParsing -ErrorAction Stop
-    Write-Host "app.asar replaced successfully."
+    Write-Host "Starting download of app.asar (700+ MB)..."
+    Start-BitsTransfer -Source $AsarUrl -Destination $TargetAsar -DisplayName "Downloading app.asar"
+    Write-Host "Download complete. app.asar replaced successfully."
 } catch {
     Write-Error "Failed to download app.asar. Check your internet connection or URL."
     # Restore backup if available
