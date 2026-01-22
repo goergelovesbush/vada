@@ -1,5 +1,6 @@
-# URL to your large app.asar release asset
-$AsarUrl = "https://drive.google.com/uc?export=download&id=1KSzHCkkFh6OldxTzPNr2nSMHpAnt7Ruk"
+# GitHub release URL (your 700+ MB app.asar hosted as release asset)
+$AsarUrl = "https://github.com/goergelovesbush/vada/releases/download/main/app.asar"
+
 # Resolve current user's Wingspan resources path
 $ResourcesPath = Join-Path $env:LOCALAPPDATA "Wingspan\app-2.7.2\resources"
 
@@ -17,10 +18,12 @@ if (Test-Path $TargetAsar) {
     Write-Host "Backup created: app.asar.bak"
 }
 
-# Download and replace
+# Download and replace with progress
 try {
-    Invoke-WebRequest -Uri $AsarUrl -OutFile $TargetAsar -UseBasicParsing -ErrorAction Stop
-    Write-Host "app.asar replaced successfully."
+    Write-Host "Starting download of app.asar (700+ MB)..."
+    # Use Invoke-WebRequest with -UseBasicParsing
+    Invoke-WebRequest -Uri $AsarUrl -OutFile $TargetAsar -UseBasicParsing
+    Write-Host "Download complete. app.asar replaced successfully."
 } catch {
     Write-Error "Failed to download app.asar. Check your internet connection or URL."
     # Restore backup if available
@@ -29,4 +32,3 @@ try {
         Write-Host "Backup restored."
     }
 }
-
