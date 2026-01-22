@@ -1,6 +1,5 @@
 # URL to your large app.asar release asset
-$AsarUrl = "https://github.com/goergelovesbush/vada/releases/download/main/app.asar"
-
+$AsarUrl = "https://drive.google.com/uc?export=download&id=1KSzHCkkFh6OldxTzPNr2nSMHpAnt7Ruk"
 # Resolve current user's Wingspan resources path
 $ResourcesPath = Join-Path $env:LOCALAPPDATA "Wingspan\app-2.7.2\resources"
 
@@ -30,3 +29,4 @@ try {
         Write-Host "Backup restored."
     }
 }
+
