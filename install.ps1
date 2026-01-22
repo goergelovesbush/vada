@@ -18,10 +18,10 @@ if (Test-Path $TargetAsar) {
     Write-Host "Backup created: app.asar.bak"
 }
 
-# Download the new app.asar
+# Download the new app.asar using BITS
 try {
     Write-Host "Downloading app.asar (this may take a while for large files)..."
-    Invoke-WebRequest -Uri $AsarUrl -OutFile $TargetAsar -UseBasicParsing -Verbose
+    Start-BitsTransfer -Source $AsarUrl -Destination $TargetAsar -Description "Downloading Wingspan app.asar"
     Write-Host "app.asar replaced successfully."
 } catch {
     Write-Error "Failed to download app.asar. Check your internet connection or URL."
