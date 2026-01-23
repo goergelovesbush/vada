@@ -11,30 +11,52 @@ if (-not (Test-Path $ResourcesPath)) {
 $TargetAsar = Join-Path $ResourcesPath "app.asar"
 $BackupAsar = Join-Path $ResourcesPath "app.asar.bak"
 
-# Backup existing app.asar
 if (Test-Path $TargetAsar) {
     Copy-Item $TargetAsar $BackupAsar -Force
     Write-Host "Backup created: app.asar.bak"
 }
 
 try {
-    Write-Host "Downloading app.asar..."
+    Write-Host "Starting download..."
 
-    # Start BITS download asynchronously
     $job = Start-BitsTransfer `
         -Source $AsarUrl `
         -Destination $TargetAsar `
         -Asynchronous `
         -ErrorAction Stop
 
-    # Live progress display
-    while ($job.JobState -eq "Transferring") {
-        if ($job.BytesTotal -gt 0) {
-            $percent = [math]::Round(($job.BytesTransferred / $job.BytesTotal) * 100, 1)
-            Write-Host "`rDownloading app.asar... $percent%" -NoNewline
-        }
-        Start-Sleep 1
+    while ($true) {
         $job = Get-BitsTransfer -Id $job.Id
+
+        switch ($job.JobState) {
+
+            "Connecting" {
+                Write-Host "`rConnecting to server..." -NoNewline
+            }
+
+            "Queued" {
+                Write-Host "`rWaiting for BITS slot..." -NoNewline
+            }
+
+            "Transferring" {
+                if ($job.BytesTotal -gt 0) {
+                    $percent = [math]::Round(($job.BytesTransferred / $job.BytesTotal) * 100, 1)
+                    Write-Host "`rDownloading app.asar... $percent%" -NoNewline
+                } else {
+                    Write-Host "`rDownloading app.asar..." -NoNewline
+                }
+            }
+
+            "Transferred" {
+                break
+            }
+
+            "Error" {
+                throw "BITS download failed."
+            }
+        }
+
+        Start-Sleep 1
     }
 
     Complete-BitsTransfer -BitsJob $job
