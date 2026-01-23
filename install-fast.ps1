@@ -1,4 +1,12 @@
+# ------------------------------
+# Wingspan app.asar updater (fast HttpClient)
+# ------------------------------
+
+# Stop parsing progress bars
 $ProgressPreference = 'SilentlyContinue'
+
+# Force TLS 1.2 for GitHub downloads
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $AsarUrl = "https://github.com/goergelovesbush/vada/releases/download/main/app.asar"
 $ResourcesPath = Join-Path $env:LOCALAPPDATA "Wingspan\app-2.7.2\resources"
@@ -15,6 +23,11 @@ $BackupAsar = Join-Path $ResourcesPath "app.asar.bak"
 if (Test-Path $TargetAsar) {
     Copy-Item $TargetAsar $BackupAsar -Force
     Write-Host "Backup created: app.asar.bak"
+}
+
+# Remove target if exists to avoid file lock errors
+if (Test-Path $TargetAsar) {
+    Remove-Item $TargetAsar -Force
 }
 
 try {
@@ -61,8 +74,13 @@ try {
     Write-Host "`napp.asar replaced successfully."
 
 } catch {
-    Write-Error "`nDownload failed. Restoring backup."
+    # Show the full real error
+    Write-Error "`nDownload failed: $($_.Exception.Message)"
+    if ($_.Exception.InnerException) {
+        Write-Error "Inner exception: $($_.Exception.InnerException.Message)"
+    }
 
+    # Restore backup if it exists
     if (Test-Path $BackupAsar) {
         Copy-Item $BackupAsar $TargetAsar -Force
         Write-Host "Backup restored."
