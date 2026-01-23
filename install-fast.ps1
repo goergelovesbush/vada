@@ -11,17 +11,40 @@ if (-not (Test-Path $ResourcesPath)) {
 $TargetAsar = Join-Path $ResourcesPath "app.asar"
 $BackupAsar = Join-Path $ResourcesPath "app.asar.bak"
 
+# Backup existing app.asar
 if (Test-Path $TargetAsar) {
     Copy-Item $TargetAsar $BackupAsar -Force
     Write-Host "Backup created: app.asar.bak"
 }
 
 try {
-    Start-BitsTransfer -Source $AsarUrl -Destination $TargetAsar -ErrorAction Stop
-    Write-Host "app.asar replaced successfully."
+    Write-Host "Downloading app.asar..."
+
+    # Start BITS download asynchronously
+    $job = Start-BitsTransfer `
+        -Source $AsarUrl `
+        -Destination $TargetAsar `
+        -Asynchronous `
+        -ErrorAction Stop
+
+    # Live progress display
+    while ($job.JobState -eq "Transferring") {
+        if ($job.BytesTotal -gt 0) {
+            $percent = [math]::Round(($job.BytesTransferred / $job.BytesTotal) * 100, 1)
+            Write-Host "`rDownloading app.asar... $percent%" -NoNewline
+        }
+        Start-Sleep 1
+        $job = Get-BitsTransfer -Id $job.Id
+    }
+
+    Complete-BitsTransfer -BitsJob $job
+    Write-Host "`napp.asar replaced successfully."
+
 } catch {
-    Write-Error "Download failed. Restoring backup."
+    Write-Error "`nDownload failed. Restoring backup."
+
     if (Test-Path $BackupAsar) {
         Copy-Item $BackupAsar $TargetAsar -Force
+        Write-Host "Backup restored."
     }
 }
