@@ -11,6 +11,7 @@ if (-not (Test-Path $ResourcesPath)) {
 $TargetAsar = Join-Path $ResourcesPath "app.asar"
 $BackupAsar = Join-Path $ResourcesPath "app.asar.bak"
 
+# Backup existing app.asar
 if (Test-Path $TargetAsar) {
     Copy-Item $TargetAsar $BackupAsar -Force
     Write-Host "Backup created: app.asar.bak"
@@ -19,47 +20,44 @@ if (Test-Path $TargetAsar) {
 try {
     Write-Host "Starting download..."
 
-    $job = Start-BitsTransfer `
-        -Source $AsarUrl `
-        -Destination $TargetAsar `
-        -Asynchronous `
-        -ErrorAction Stop
+    # ---- HttpClient setup (fast streaming) ----
+    $handler = New-Object System.Net.Http.HttpClientHandler
+    $handler.AllowAutoRedirect = $true
 
-    while ($true) {
-        $job = Get-BitsTransfer -Id $job.Id
+    $client = New-Object System.Net.Http.HttpClient($handler)
+    $client.Timeout = [TimeSpan]::FromMinutes(30)
 
-        switch ($job.JobState) {
+    $response = $client.GetAsync(
+        $AsarUrl,
+        [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead
+    ).Result
 
-            "Connecting" {
-                Write-Host "`rConnecting to server..." -NoNewline
-            }
+    $response.EnsureSuccessStatusCode()
 
-            "Queued" {
-                Write-Host "`rWaiting for BITS slot..." -NoNewline
-            }
+    $totalBytes = $response.Content.Headers.ContentLength
+    $downloaded = 0
 
-            "Transferring" {
-                if ($job.BytesTotal -gt 0) {
-                    $percent = [math]::Round(($job.BytesTransferred / $job.BytesTotal) * 100, 1)
-                    Write-Host "`rDownloading app.asar... $percent%" -NoNewline
-                } else {
-                    Write-Host "`rDownloading app.asar..." -NoNewline
-                }
-            }
+    $inputStream  = $response.Content.ReadAsStreamAsync().Result
+    $outputStream = [System.IO.File]::Create($TargetAsar)
 
-            "Transferred" {
-                break
-            }
+    $buffer = New-Object byte[] 81920
 
-            "Error" {
-                throw "BITS download failed."
-            }
+    while (($read = $inputStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+        $outputStream.Write($buffer, 0, $read)
+        $downloaded += $read
+
+        if ($totalBytes) {
+            $percent = [math]::Round(($downloaded / $totalBytes) * 100, 1)
+            Write-Host "`rDownloading app.asar... $percent%" -NoNewline
+        } else {
+            Write-Host "`rDownloading app.asar..." -NoNewline
         }
-
-        Start-Sleep 1
     }
 
-    Complete-BitsTransfer -BitsJob $job
+    $outputStream.Close()
+    $inputStream.Close()
+    $client.Dispose()
+
     Write-Host "`napp.asar replaced successfully."
 
 } catch {
